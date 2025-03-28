@@ -1,13 +1,14 @@
-# [Nome do projeto]
+# [TimeCare]
 
-[Escreva um ou dois  parágrafo resumindo o objetivo do seu projeto.]
-
+Dispositivo  para monitoramento e controle dos horários de medicação, visando garantir auxílio a administração de medicamentos. 
 ## Alunos integrantes da equipe
 
-* [Nome completo do aluno 1]
-* [Nome completo do aluno 2]
-* [Nome completo do aluno 3]
-* [Nome completo do aluno 4]
+* Bruno Braga Guimarães Alves
+* João Vítor de Freitas Scarlatelli
+* Nagib Alexandre Verly Borjaili
+* Vitor Dias de Britto Militão
+* Vitor Lucio de Oliveira
+* Yasmin Cassemiro Viegas
 
 ## Professores responsáveis
 
