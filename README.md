@@ -1,6 +1,6 @@
-# [TimeCare]
+# TimeCare
 
-Dispositivo  para monitoramento e controle dos horários de medicação, visando garantir auxílio a administração de medicamentos. 
+Dispositivo  para monitoramento e controle dos horários de medicação, visando garantir a administração correta de medicamentos. 
 ## Alunos integrantes da equipe
 
 * Bruno Braga Guimarães Alves
