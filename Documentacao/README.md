@@ -31,9 +31,9 @@ Este projeto tem como objetivo auxiliar usuários no controle de medicações, a
 ## 📁 Estrutura do Projeto
 
 PLMG-CC-TI5-2025-1-G15-TIMECARE/
-- [/Codigo](./Codigo): Códigos utilizados (físico e virtual)
-- [/Divulgacao](./Divulgacao): Slides e vídeos utilizados
-- [/Documentacao](./Documentacao): Informações oficiais sobre o trabalho
+- [/Codigo](../Codigo): Códigos utilizados (físico e virtual)
+- [/Divulgacao](../Divulgacao): Slides e vídeos utilizados
+- [/Documentacao](../Documentacao): Informações oficiais sobre o trabalho
 - [../README.md](../README.md): Documentação principal
 
 
