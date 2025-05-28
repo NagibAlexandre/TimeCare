@@ -1,6 +1,7 @@
-# TimeCare
+# TimeCare - Grupo 15
  
 Dispositivo  para monitoramento e controle dos horários de medicação, visando garantir a administração correta de medicamentos. 
+
 ## Alunos integrantes da equipe
 
 * Bruno Braga Guimarães Alves
@@ -12,9 +13,11 @@ Dispositivo  para monitoramento e controle dos horários de medicação, visando
 
 ## Professores responsáveis
 
-* [Nome completo do professor 1]
-* [Nome completo do professor 2]
+* Matheus Alcântara Souza
+* Rafael Henriques Nogueira Diniz
 
 ## Instruções de utilização
 
-[Assim que a primeira versão do sistema estiver disponível, deverá complementar com as instruções de utilização. Descreva como instalar eventuais dependências e como executar a aplicação.]
+Para utilizar a aplicação, tendo em mãos o produto físico, basta realizar a instalação do aplicativo para fazer o controle dos medicamentos, temos uma aba com um CRUD de remédios que precisam ser tomados, o usuário consegue dinâmicamente adicionar um remédio e ele já será importado e computado pela caixa, alertando o mesmo quando for a hora para ingestão da medicação.
+
+Também é preciso submeter a placa alguma informação de uma possível rede para se conectar, para ela conseguir acessar o banco de dados da Firebase e gerir os remédios.
