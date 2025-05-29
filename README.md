@@ -7,7 +7,7 @@ Dispositivo  para monitoramento e controle dos horários de medicação, visando
 * Bruno Braga Guimarães Alves
 * João Vítor de Freitas Scarlatelli
 * Nagib Alexandre Verly Borjaili
-* Vitor Dias de Britto Militão
+* Vitor Dias de Britto 
 * Vitor Lucio de Oliveira
 * Yasmin Cassemiro Viegas
 
