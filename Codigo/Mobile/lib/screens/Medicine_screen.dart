@@ -155,7 +155,7 @@ class _MedicineScreenState extends State<MedicineScreen> {
           _selectedTime!,
         ), // Format selected time
         'instructions': _instructionsController.text,
-        'status': 'on-time', // Default status
+        'status': 'off-time', // Default status
         // 'createdAt': ServerValue.timestamp, // Removed as per new structure
         // 'bit': false, // Removed as per new structure
       });

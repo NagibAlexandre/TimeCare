@@ -55,7 +55,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return Scaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
       appBar: AppBar(
-        title: const Text('Análises'),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -128,7 +127,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Progresso da Semana',
+                      'Progresso do Dia',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18, // Increased font size
