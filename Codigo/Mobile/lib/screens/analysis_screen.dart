@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:math'; // Import dart:math for calculations
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
@@ -10,13 +12,36 @@ class AnalysisScreen extends StatefulWidget {
 }
 
 class _AnalysisScreenState extends State<AnalysisScreen> {
-  // Constants for the daily report
-  static const int total_remedios = 12;
-  static const int remedios_atrasados = 1;
-  static const int remedios_naotomados = 2;
+  int onTime = 0;
+  int lateTime = 0;
+  int offTime = 0;
 
-  int get remedios_corretos =>
-      total_remedios - remedios_naotomados - remedios_atrasados;
+  @override
+  void initState() {
+    super.initState();
+    fetchStatusCounts();
+  }
+
+  Future<void> fetchStatusCounts() async {
+    // Make sure Firebase is initialized
+    await Firebase.initializeApp();
+
+    final ref = FirebaseDatabase.instance.ref('user_test');
+    final snapshot = await ref.get();
+    if (snapshot.exists) {
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      setState(() {
+        onTime = data['onTime'] ?? 0;
+        lateTime = data['lateTime'] ?? 0;
+        offTime = data['offTime'] ?? 0;
+      });
+    }
+  }
+
+  int get total_remedios => onTime + lateTime + offTime;
+  int get remedios_corretos => onTime;
+  int get remedios_atrasados => lateTime;
+  int get remedios_naotomados => offTime;
 
   // Pie chart data: [green, yellow, red]
   List<double> get pieData {
@@ -54,10 +79,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

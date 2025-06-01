@@ -9,20 +9,6 @@ if (!admin.apps.length) admin.initializeApp();
 exports.resetMedicationStatusDaily = functions.https.onRequest(
   async (req, res) => {
     try {
-      // Obter data/hora atual no fuso horário de São Paulo
-      const now = new Date();
-      const nowSP = new Date(
-        now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
-      );
-      const hour = nowSP.getHours();
-      const minute = nowSP.getMinutes();
-
-      // Só executa se for 19:00
-      if (hour !== 19 || minute !== 0) {
-        res.status(200).send("A função só executa às 19:00.");
-        return;
-      }
-
       const db = admin.database();
       const userRef = db.ref("user_test");
       const userSnapshot = await userRef.once("value");
