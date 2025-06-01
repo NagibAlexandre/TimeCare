@@ -490,6 +490,21 @@ class _MedicineScreenState extends State<MedicineScreen> {
     );
   }
 
+  Future<void> _updateMedicineStatus(String key, String newStatus) async {
+    try {
+      await _databaseRef.child(key).update({'status': newStatus});
+      if (!mounted) return;
+      _showModernNotification(context, 'Status atualizado para $newStatus');
+    } catch (e) {
+      if (!mounted) return;
+      _showModernNotification(
+        context,
+        'Erro ao atualizar status: $e',
+        isError: true,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -693,28 +708,52 @@ class _MedicineScreenState extends State<MedicineScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Left side icon
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color:
-                              medicine['status'] == 'on-time'
-                                  ? CupertinoColors.systemGreen.withOpacity(0.1)
-                                  : CupertinoColors.systemRed.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(
-                            20,
-                          ), // Make it circular
-                        ),
+                      GestureDetector(
+                        onTap: () {
+                          if (medicine['status'] != 'on-time' &&
+                              medicine['status'] != 'late-time') {
+                            showCupertinoModalPopup(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return CupertinoActionSheet(
+                                  title: const Text('Alterar status'),
+                                  message: const Text(
+                                    'Deseja marcar este remédio como atrasado?',
+                                  ),
+                                  actions: [
+                                    CupertinoActionSheetAction(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _updateMedicineStatus(
+                                          medicine['key'],
+                                          'late-time',
+                                        );
+                                      },
+                                      child: const Text('Marcar como atrasado'),
+                                    ),
+                                  ],
+                                  cancelButton: CupertinoActionSheetAction(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                );
+                              },
+                            );
+                          }
+                        },
                         child: Icon(
                           medicine['status'] == 'on-time'
                               ? CupertinoIcons.checkmark_circle_fill
-                              : CupertinoIcons
-                                  .circle_fill, // Use circle_fill for red dot
+                              : medicine['status'] == 'late-time'
+                              ? CupertinoIcons.clock_solid
+                              : CupertinoIcons.circle_fill,
                           color:
                               medicine['status'] == 'on-time'
                                   ? CupertinoColors.systemGreen
+                                  : medicine['status'] == 'late-time'
+                                  ? CupertinoColors.systemYellow
                                   : CupertinoColors.systemRed,
-                          size: 24.0, // Adjust icon size
+                          size: 24.0,
                         ),
                       ),
                       const SizedBox(width: 16),
