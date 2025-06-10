@@ -20,7 +20,7 @@ const char *ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = -3 * 3600; // Fuso horário de Brasília
 const int daylightOffset_sec = 0;
 
-// portas dos omponentes 
+// portas dos componentes 
 const int ledPins[] = {16, 4, 2, 15};
 const int buzzerPin = 17;
 const int reedPin = 13;
@@ -38,9 +38,44 @@ bool reedAbriu()
 {
     if (digitalRead(reedPin) == HIGH)
     {
-        delay(30); 
+        delay(30);
         if (digitalRead(reedPin) == HIGH)
-        { 
+        {
+            // Obtem o horário atual
+            struct tm timeinfo;
+            if (getLocalTime(&timeinfo))
+            {
+                // Soma 3 horas manualmente (converte para UTC+0)
+                timeinfo.tm_hour += 3;
+
+                // Ajusta o dia se passar da meia-noite
+                if (timeinfo.tm_hour >= 24)
+                {
+                    timeinfo.tm_hour -= 24;
+                    timeinfo.tm_mday += 1;
+
+                    mktime(&timeinfo);
+                }
+
+                char timestamp[25];
+                strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
+
+                // Atualiza o campo last_open no Firebase
+                String path = "/user_test/last_open";
+                if (Firebase.RTDB.setString(&fbdo, path, String(timestamp)))
+                {
+                    Serial.println("last_open atualizado");
+                }
+                else
+                {
+                    Serial.println("Erro: " + fbdo.errorReason());
+                }
+            }
+            else
+            {
+                Serial.println("Erro ao obter hora para last_open.");
+            }
+
             return true;
         }
     }
