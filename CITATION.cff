@@ -1,31 +1,31 @@
 cff-version: 1.0.1
 message: Please cite this software using these metadata.
-title: 
+title: TimeCare - Grupo 15
 authors:
-  - family-names: 
-    given-names: 
-  - family-names: 
-    given-names: 
-  - family-names: 
-    given-names: 
-  - family-names: 
-    given-names: 
-  - family-names: 
-    given-names: 
-  - family-names: 
-    given-names:
-  - name-suffix: Professor
-    affiliation: PUC Minas
-    family-names: 
-    given-names: 
-  - name-suffix: Professor
-    affiliation: PUC Minas
-    family-names: 
-    given-names: 
+- given-names: Bruno Braga Guimarães
+  family-names: Alves
+- given-names: João Vítor de Freitas
+  family-names: Scarlatelli
+- given-names: Nagib Alexandre Verly
+  family-names: Borjaili
+- given-names: Vitor Dias de
+  family-names: Britto
+- given-names: Vitor Lucio de
+  family-names: Oliveira
+- given-names: Yasmin Cassemiro
+  family-names: Viegas
+- given-names: Matheus Alcântara
+  family-names: Souza
+  name-suffix: Professor
+  affiliation: PUC Minas
+- given-names: Rafael Henriques Nogueira
+  family-names: Diniz
+  name-suffix: Professor
+  affiliation: PUC Minas
 keywords:
-  - 
-  - 
-repository-code: 
+- null
+- null
+repository-code: https://github.com/ICEI-PUC-Minas-CC-TI/plmg-cc-ti5-2025-1-g15-timecare
 license: CC-BY-4.0
 version: 1.0.0
 date-released: 2022-07-14
