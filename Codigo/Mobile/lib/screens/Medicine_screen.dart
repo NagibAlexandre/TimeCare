@@ -89,12 +89,12 @@ class _MedicineScreenState extends State<MedicineScreen> {
                 decoration: BoxDecoration(
                   color:
                       isError
-                          ? CupertinoColors.destructiveRed.withOpacity(0.9)
-                          : CupertinoColors.systemGreen.withOpacity(0.9),
+                          ? CupertinoColors.destructiveRed.withValues(alpha: 0.9)
+                          : CupertinoColors.systemGreen.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

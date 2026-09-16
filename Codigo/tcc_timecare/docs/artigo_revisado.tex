@@ -1,0 +1,291 @@
+\documentclass[12pt]{article}
+
+\usepackage{sbc-template}
+\usepackage{graphicx,url}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{subcaption}
+
+\sloppy
+
+\title{Desenvolvimento de Dispositivo Vestível para Validação e Expansão de um Sistema Inteligente de Administração de Medicamentos}
+
+\author{Nagib A. V. Borjaili\inst{1}, Ilo A. S. Rivero\inst{1}}
+
+\address{Instituto de Ciências Exatas e Informática\\
+  Pontifícia Universidade Católica de Minas Gerais (PUC Minas)\\
+  Caixa postal 1.686 -- 30.535-901 -- Belo Horizonte -- MG -- Brasil
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This work presents the development of TimeCare, a mobile application designed to extend a previously developed smart pillbox through integration with a wrist-worn device. The implemented software retrieves heart rate, peripheral oxygen saturation, and temperature records from a centralized database, alongside medication schedules and their current recorded status. It provides period summaries, a personal reference based on robust statistics, a view of unusual measurements, and daily PDF exports. Measurements that deviate from the recent individual pattern are highlighted for review, without establishing a diagnosis or a causal relationship with medication. Integrated hardware validation and evaluation with participants remain future stages.
+\end{abstract}
+
+\begin{resumo}
+Este trabalho apresenta o desenvolvimento do TimeCare, uma aplicação móvel concebida para expandir um porta-remédios inteligente previamente desenvolvido por meio da integração com um dispositivo vestível de pulso. O software implementado consulta registros de frequência cardíaca, saturação periférica de oxigênio e temperatura em uma base centralizada, além de horários de medicamentos e seus estados atuais registrados. A aplicação oferece resumos por período, referência pessoal baseada em estatística robusta, consulta de medições incomuns e exportação diária em PDF. Valores que se afastam do padrão individual recente são destacados para revisão, sem estabelecer diagnóstico ou relação causal com medicamentos. A validação integrada do hardware e a avaliação com participantes permanecem como etapas futuras.
+\end{resumo}
+
+\section{Introdução}
+
+A administração de medicamentos constitui uma etapa essencial no tratamento de diversas condições clínicas. Sua realização exige responsabilidade tanto do profissional de saúde, que define a prescrição e acompanha a resposta terapêutica, quanto do paciente, que deve respeitar a dose, os intervalos e os horários estabelecidos \cite{aremu2022medication}.
+
+Entre esses produtos encontram-se os medicamentos sujeitos a controle especial, que exigem maior rigor de prescrição, dispensação e acompanhamento. O uso inadequado pode resultar em eventos adversos e, para determinadas substâncias, dependência, o que reforça a importância do cumprimento das orientações profissionais \cite{anvisa3441998}.
+
+Um levantamento da Sandbox divulgado em 2024 relatou crescimento de 18,6\% no uso de medicamentos para saúde mental entre agosto de 2022 e agosto de 2024, na população investigada \cite{sandbox:2024}. Esse resultado não deve ser interpretado como aumento uniforme de todas as classes de medicamentos nem como estimativa da população brasileira em geral.
+
+Em outro contexto, Chung et al. \cite{chung2019trends} analisaram registros de uma organização de saúde do norte da Califórnia entre 2007 e 2016. Entre aproximadamente 5,3 milhões de adultos e 867 mil crianças de cinco a onze anos, a prevalência registrada de Transtorno do Déficit de Atenção com Hiperatividade (TDAH) aumentou de 0,43\% para 0,96\% nos adultos e de 2,96\% para 3,74\% nas crianças. Os resultados descrevem aquela população e não equivalem a estimativas brasileiras.
+
+Para pessoas com TDAH, a adesão ao tratamento pode ser dificultada por prejuízos em funções executivas, como organização, memória operacional e gestão do tempo. Essas características podem comprometer o cumprimento de horários de administração. Embora o tratamento farmacológico constitua um dos recursos empregados no manejo do transtorno, a adesão ainda apresenta desafios relevantes na prática clínica \cite{nguyen2025factors}.
+
+Este trabalho tem como objetivo desenvolver um dispositivo vestível de pulso e integrá-lo a uma aplicação móvel voltada ao acompanhamento de pessoas que utilizam medicamentos de forma recorrente. A aplicação recebe registros de frequência cardíaca, saturação periférica de oxigênio e temperatura, organiza o histórico individual e destaca variações em relação ao padrão recente do usuário. Também mantém o cadastro de medicamentos, seus horários e um estado atual por registro, sem implementar um histórico individualizado de todas as administrações.
+
+O projeto expande uma solução previamente desenvolvida de porta-remédios inteligente \cite{timecare_github}, cujo firmware consulta horários de medicamentos, aciona sinalização local e registra o instante da última abertura da caixa. A abertura de um compartimento ou a alteração do estado de uma dose, entretanto, constitui apenas indício de acesso ao medicamento e não comprova sua ingestão. Da mesma forma, uma alteração fisiológica próxima ao horário de uso não estabelece, isoladamente, relação causal com o fármaco.
+
+\section{Revisão de literatura e trabalhos relacionados}
+
+\subsection{Medicamentos controlados}
+
+No Brasil, medicamentos controlados, ou sujeitos a controle especial, são aqueles submetidos a regras mais rigorosas de prescrição, dispensação e escrituração em razão dos riscos associados às substâncias que contêm e às condições de uso \cite{anvisa_controlados}.
+
+Em âmbito internacional, a Organização Mundial da Saúde relaciona o controle dessas substâncias às convenções internacionais sobre entorpecentes e psicotrópicos \cite{who_controlled_medicines}. A Convenção Única sobre Entorpecentes de 1961 abrange, entre outras substâncias, opioides e derivados do ópio. A Convenção sobre Substâncias Psicotrópicas de 1971 inclui classes com ação no sistema nervoso central, como psicoestimulantes, benzodiazepínicos e barbitúricos. Essas substâncias podem estar presentes em tratamentos de dor, ansiedade, transtornos psicóticos, TDAH e convulsões, conforme a indicação clínica e a regulamentação aplicável.
+
+\subsection{Soluções relacionadas}
+
+\subsubsection{Medication Event Monitoring System}
+
+O Medication Event Monitoring System (MEMS) registra datas e horários de acesso a uma embalagem de medicamento por meio da detecção de sua abertura, permitindo acompanhar eventos associados ao uso \cite{pal2021review}. Apesar de útil para caracterizar a rotina, o registro de abertura não assegura que o paciente tenha ingerido o medicamento nem determina quantas doses foram retiradas \cite{mason2024technologies}.
+
+O TimeCare adota a mesma cautela conceitual. O instante de abertura da caixa e os estados dos medicamentos são informações de acompanhamento, sem constituir um registro completo de eventos de ingestão. Os sinais vitais acrescentam contexto temporal e uma referência fisiológica individual, mas não são empregados para confirmar automaticamente a ingestão.
+
+\subsubsection{Smart pillboxes}
+
+As \textit{smart pillboxes} são dispositivos eletrônicos desenvolvidos para auxiliar o gerenciamento da administração de medicamentos. Entre os recursos encontrados nessa categoria estão lembretes, registro de acesso aos compartimentos e transmissão de informações a pacientes ou cuidadores \cite{shahani2022electronic}.
+
+Esses sistemas podem contribuir para reduzir esquecimentos e organizar tratamentos contínuos \cite{shahani2022electronic}. Sua principal limitação é que a interação com o compartimento não equivale necessariamente à administração da dose. No TimeCare, o dispositivo vestível complementa esses registros com medições fisiológicas, permitindo observar a evolução individual dos sinais vitais sem substituir a avaliação clínica.
+
+\subsubsection{Smartwatches para monitoramento de saúde}
+
+O avanço dos dispositivos vestíveis ampliou o uso de sensores ópticos e inerciais para monitorar frequência cardíaca, atividade física e, em determinados equipamentos, saturação de oxigênio e sono. Esses dispositivos favorecem a coleta fora do ambiente clínico, mas seu desempenho depende do sensor, do parâmetro, do posicionamento e das condições de uso \cite{zhang2020validity}.
+
+A fotopletismografia (PPG), utilizada na obtenção óptica do pulso e da SpO$_2$, está sujeita a fontes de erro como movimento, luz ambiente, pressão de contato, temperatura, local de medição e características individuais \cite{fine2021sources,ray2021review}. Por esse motivo, uma leitura isolada não deve ser interpretada como evidência suficiente de alteração clínica. O TimeCare preserva o histórico e apresenta desvios para revisão, sem emitir diagnóstico.
+
+\subsubsection{Remote Patient Monitoring}
+
+O \textit{Remote Patient Monitoring} (RPM), ou monitoramento remoto de pacientes, utiliza dispositivos conectados para coletar e transmitir informações de saúde fora do ambiente hospitalar. Essa abordagem é empregada em diferentes contextos, incluindo acompanhamento de doenças crônicas e recuperação pós-operatória \cite{vegesna2017remote}.
+
+Sistemas de RPM podem ampliar a disponibilidade temporal de informações como frequência cardíaca, pressão arterial, saturação de oxigênio e atividade física. Entretanto, revisões da literatura destacam heterogeneidade entre dispositivos, frequências de medição, populações e protocolos, o que limita generalizações sobre benefícios clínicos \cite{leenen2020current}.
+
+O TimeCare compartilha o princípio de coletar e disponibilizar dados fisiológicos fora de avaliações pontuais. No estágio atual, sua finalidade é organizar o histórico do usuário e sinalizar mudanças em relação à própria referência, fornecendo subsídios para conferência e eventual discussão com um profissional de saúde.
+
+\section{Motivação}\label{sec:firstpage}
+
+O uso recorrente de medicamentos requer atenção à dose e aos horários prescritos. Esquecimentos, atrasos e dificuldades de organização podem comprometer a regularidade do tratamento, especialmente quando há múltiplas administrações ao longo do dia.
+
+Paralelamente, medições realizadas no cotidiano podem revelar mudanças no padrão fisiológico do usuário que não seriam observadas em avaliações pontuais. A análise de tendências de sinais vitais apresenta potencial para acrescentar informação ao acompanhamento, embora a evidência disponível ainda seja limitada e não permita interpretar qualquer desvio como deterioração clínica \cite{brekke2019value}.
+
+Nesse contexto, a integração entre porta-remédios, dispositivo vestível, armazenamento remoto e aplicação móvel oferece uma forma de reunir informações antes dispersas. A proposta não busca substituir equipamentos clínicos ou decisões profissionais, mas apoiar a organização da rotina e a revisão do histórico individual.
+
+\section{Problema e objetivos}
+
+O problema abordado é a ausência de uma visão integrada entre os registros da rotina medicamentosa e o histórico de sinais vitais do próprio usuário. Limites populacionais únicos podem desconsiderar diferenças individuais, enquanto valores isolados são sensíveis a variações fisiológicas e a erros de aquisição.
+
+O objetivo geral é desenvolver e integrar um dispositivo vestível a uma aplicação móvel e a uma caixa de remédios inteligente. Como objetivos específicos, pretende-se: registrar frequência cardíaca, SpO$_2$ e temperatura; armazenar cada medição com seu instante de coleta; disponibilizar cadastro e acompanhamento de medicamentos; calcular resumos por período; construir referências pessoais por parâmetro; destacar variações incomuns para revisão; e permitir a exportação das medições em PDF.
+
+Não constitui objetivo do protótipo diagnosticar condições clínicas, recomendar alterações de tratamento, confirmar ingestão ou atribuir causalidade entre uma medição e um medicamento. A análise individual responde apenas se determinado valor se afastou do padrão recente registrado para aquela pessoa.
+
+\section{Metodologia}
+
+O desenvolvimento compreende a definição da arquitetura, a persistência dos dados, a implementação da aplicação móvel, o tratamento das séries fisiológicas e a validação técnica. O estado do software é descrito separadamente das etapas de montagem e validação física do vestível. A Figura~\ref{fig:metodologia-geral} sintetiza o fluxo previsto e o processamento implementado.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{images/metodologia.png}{
+        \includegraphics[width=\textwidth]{images/metodologia.png}
+    }{
+        \fbox{\parbox{0.88\textwidth}{\centering Vestível (aquisição prevista) $\longrightarrow$ Firebase\\[0.3cm] Firebase $\longleftrightarrow$ Aplicativo Flutter\\[0.3cm] Aplicativo: leitura $\longrightarrow$ resumo e referência pessoal\\[0.3cm] Apresentação: medições, ocorrências e PDF diário\\[0.3cm] Caixa existente: consulta de horários e sinalização local}}
+    }
+    \caption{Metodologia geral do projeto.}
+    \label{fig:metodologia-geral}
+\end{figure}
+
+\subsection{Componentes externos}
+
+Para viabilizar a aquisição dos sinais vitais e a comunicação com a infraestrutura da aplicação, foram selecionados um microcontrolador com conectividade sem fio, sensores fisiológicos e componentes auxiliares. Os componentes previstos no protótipo são apresentados na Tabela~\ref{tab:componentes-hardware}.
+
+\begin{table}[H]
+\centering
+\caption{Componentes previstos para o protótipo.}
+\label{tab:componentes-hardware}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Componente} & \textbf{Função} \\ \hline
+
+ESP32 DevKitC & Processamento e comunicação Wi-Fi \\ \hline
+
+MAX30102 & Aquisição de frequência cardíaca e SpO$_2$ \\ \hline
+
+MPU6050 (GY-521) & Aquisição de movimento e orientação \\ \hline
+
+SparkFun TMP117 (Qwiic) & Aquisição de temperatura \\ \hline
+
+Buzzer ativo 5 V & Sinalização sonora \\ \hline
+
+LED vermelho 5 mm & Sinalização visual \\ \hline
+
+Transistor NPN BC337 & Acionamento de cargas pelo ESP32 \\ \hline
+
+Resistores & Limitação de corrente e polarização do circuito \\ \hline
+
+Jumpers & Conexão elétrica entre os componentes \\ \hline
+
+Protoboard 830 pontos & Montagem e testes do circuito \\ \hline
+
+\end{tabular}
+\end{table}
+
+\subsection{Interconexão com a aplicação}
+
+O ESP32 DevKitC possui conectividade Wi-Fi integrada, permitindo o envio das medições sem a inclusão de outro módulo de rede. O Firebase Realtime Database foi adotado como repositório central compartilhado pelos componentes do sistema. Na implementação móvel, o acesso é realizado pela interface REST do serviço: a aplicação consulta os registros quando a tela é carregada ou atualizada e envia alterações de cadastro por requisições HTTP. Portanto, a versão atual utiliza uma base centralizada, mas não mantém uma escuta contínua de atualizações na interface.
+
+Cada registro fisiológico contém um instante de coleta e um ou mais valores reconhecidos pela aplicação. O esquema de dados agrupa as informações sob um nó de usuário. A versão atual emprega o caminho fixo \texttt{user\_test} e o cliente REST não envia credenciais de autenticação; antes de uso com dados reais de diferentes participantes, será necessária autenticação individual, segregação por identificador e configuração de regras de acesso no banco.
+
+\subsubsection{Parâmetros fisiológicos}
+
+O tratamento implementado na aplicação contempla três parâmetros: frequência cardíaca, saturação periférica de oxigênio e temperatura. O MAX30102 fornece dados ópticos dos dois primeiros parâmetros e o TMP117 é destinado à aquisição de temperatura. Embora o MPU6050 integre a arquitetura do dispositivo e possibilite estudos futuros sobre movimento, a aplicação atual não calcula atividade física, quedas ou qualidade do sono. Da mesma forma, não foi implementado cálculo de variabilidade da frequência cardíaca (HRV).
+
+\begin{table}[H]
+\centering
+\caption{Parâmetros contemplados no tratamento atual da aplicação.}
+\label{tab:parametros-monitorados}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Sensor} & \textbf{Dado adquirido} & \textbf{Tratamento no aplicativo} \\ \hline
+MAX30102 & Frequência cardíaca & Implementado \\ \hline
+MAX30102 & SpO$_2$ & Implementado \\ \hline
+TMP117 & Temperatura & Implementado \\ \hline
+MPU6050 & Movimento e orientação & Não integrado à análise atual \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Arquitetura de hardware}
+
+A arquitetura prevista para o dispositivo vestível é composta pelo ESP32 DevKitC, pelos sensores e pelos elementos de alimentação e sinalização. O microcontrolador deverá coordenar a aquisição e a transmissão das informações. O MAX30102 utiliza fotopletismografia, técnica óptica baseada nas variações de absorção da luz associadas ao volume sanguíneo. O TMP117 fornece a medição térmica e o MPU6050 disponibiliza aceleração e rotação para extensões futuras.
+
+A presença física de um sensor não garante, por si só, validade clínica da medição. A validação do protótipo deverá comparar os resultados com instrumentos de referência e considerar condições de posicionamento e movimento. Em estudo de validação de um biossensor vestível, Haveman et al. \cite{haveman2021continuous} observaram desempenhos diferentes entre frequência cardíaca, SpO$_2$ e temperatura, reforçando a necessidade de avaliar cada parâmetro separadamente.
+
+\subsubsection{Interface da aplicação móvel}
+
+A aplicação móvel foi desenvolvida em Flutter, a partir de uma única base de código, e constitui o principal ponto de interação do usuário com o sistema. Na versão atual, a navegação é organizada em quatro módulos: cadastro e acompanhamento de medicamentos, visualização de sinais vitais, consulta de ocorrências e gerenciamento do perfil. Os dados persistentes são mantidos no Firebase Realtime Database e acessados pela aplicação por meio da interface REST.
+
+No módulo de medicamentos, o usuário pode cadastrar e editar nome, dosagem, instruções e horário, além de remover registros individualmente ou em conjunto. Não há campo específico de tipo de medicamento. Cada registro é criado com o estado \texttt{off-time}; a tela distingue os estados \texttt{on-time}, \texttt{late-time} e os demais valores, mas a ação manual disponível permite apenas marcar como atrasado um registro ainda não classificado como pontual ou atrasado. A atualização sobrescreve o estado atual, sem guardar o instante de cada tomada ou gerar uma sequência diária de doses. Esses estados não comprovam ingestão.
+
+O módulo de sinais vitais consulta frequência cardíaca, SpO$_2$ e temperatura. Os filtros correspondem às últimas 24 horas, sete dias ou trinta dias, contados a partir da consulta. O resumo utiliza todas as leituras elegíveis do intervalo, enquanto a listagem apresenta no máximo as trinta mais recentes. A referência pessoal utiliza uma janela própria de trinta dias. A exportação diária contém as leituras carregadas da data escolhida e os dados de identificação disponíveis no perfil, incluindo nome, e-mail e idade. Inclui a versão do algoritmo do aplicativo e informa que não constitui diagnóstico; não inclui escores, medicamentos ou contexto clínico completo.
+
+A tela de ocorrências apresenta desvios por parâmetro identificados no conjunto recente pelo algoritmo, com data, valor e magnitude do escore robusto. Uma única medição pode originar até três ocorrências. Os rótulos são recalculados localmente e não são persistidos no banco; portanto, a tela não constitui um histórico permanente de alertas. As amostras originais permanecem armazenadas, inclusive quando classificadas como incomuns. Quando há ocorrências, a interface informa que a classificação não constitui diagnóstico.
+
+O perfil reúne informações cadastrais e contextuais, além de preferências de acessibilidade, como tema, contraste e escala de texto. Idade, sexo ao nascer, gestação, uso de oxigênio suplementar e condições informadas não alteram matematicamente a referência pessoal nesta versão. Esses campos fornecem contexto para interpretação humana e para possíveis modelos futuros, evitando a aplicação de pesos clínicos que ainda não foram validados.
+
+\begin{figure}[H]
+    \centering
+
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \IfFileExists{images/app-sinais-vitais.png}{\includegraphics[width=\linewidth,height=10cm,keepaspectratio]{images/app-sinais-vitais.png}}{\fbox{\parbox[c][6cm][c]{0.9\linewidth}{\centering Captura da tela de sinais vitais a inserir.}}}
+        \caption{Resumo de sinais vitais e comparação com a referência pessoal.}
+        \label{fig:app-sinais-vitais}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \vspace{0pt}
+        \IfFileExists{images/app-ocorrencias.png}{\includegraphics[width=\linewidth,height=10cm,keepaspectratio]{images/app-ocorrencias.png}}{\fbox{\parbox[c][6cm][c]{0.9\linewidth}{\centering Captura da tela de ocorrências a inserir.}}}
+        \caption{Leituras classificadas para revisão no módulo de ocorrências.}
+        \label{fig:app-ocorrencias}
+    \end{subfigure}
+
+    \caption{Telas do aplicativo para acompanhamento dos sinais vitais e das ocorrências identificadas.}
+    \label{fig:app-monitoramento}
+\end{figure}
+
+\subsubsection{Coleta e tratamento de dados}
+
+As medições são lidas do nó \texttt{user\_test/sinais\_vitais} como um mapa de registros. Um módulo compartilhado padroniza a interpretação dos campos nas telas de sinais vitais e ocorrências e na exportação em PDF. O instante é obtido de \texttt{timestamp}, de \texttt{createdAt} ou, na ausência de ambos, da chave. Valores numéricos são interpretados como tempo Unix em milissegundos; textos também podem representar datas ISO~8601. Não há conversão automática de segundos para milissegundos. Registros sem instante interpretável, futuros ou sem métricas reconhecidas são desconsiderados na apresentação, sem exclusão do banco. Campos ausentes e valores não finitos não são substituídos por zero. Duplicatas exatas são colapsadas, e cada parâmetro é processado separadamente. A listagem é ordenada da medição mais recente para a mais antiga.
+
+O resumo da tela apresenta duas medidas distintas. A primeira é a média do período, calculada apenas com os valores existentes dentro do intervalo escolhido pelo usuário. Para um parâmetro com $n$ observações $x_i$, utiliza-se a média aritmética
+
+\begin{equation}
+    \bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i.
+    \label{eq:media-periodo}
+\end{equation}
+
+Essa medida descreve as observações disponíveis e não é utilizada para classificar ocorrências. Não há ponderação pelo tempo: intervalos com maior densidade de coleta têm maior peso no resumo. A distinção é necessária porque a média aritmética pode ser deslocada por valores extremos, inclusive por leituras afetadas por ruído.
+
+A segunda medida, exibida como mediana, é calculada com o histórico recente do próprio usuário, separadamente para cada parâmetro. O algoritmo considera uma janela móvel de trinta dias e somente libera a referência após reunir pelo menos vinte amostras com diferença de pelo menos quatorze dias completos entre a primeira e a última. Não se exige uma amostra em cada dia nem regularidade entre coletas. Antes de atender aos dois critérios, a interface apresenta o estado de calibração e a quantidade de amostras disponíveis; ``calibração'' designa aqui a formação da referência estatística, não a calibração física dos sensores.
+
+A referência pessoal corresponde à mediana, distinta da média aritmética do período. Ordenando-se os valores elegíveis, a mediana $\widetilde{x}$ corresponde ao valor central quando $n$ é ímpar e à média dos dois valores centrais quando $n$ é par. Em seguida, calcula-se o desvio absoluto mediano (MAD):
+
+\begin{equation}
+    \operatorname{MAD}=\operatorname{mediana}\left(\left|x_i-\widetilde{x}\right|\right).
+    \label{eq:mad}
+\end{equation}
+
+Para cada amostra, é obtido um escore robusto modificado:
+
+\begin{equation}
+    z_i^{*}=\frac{0{,}6745\left(x_i-\widetilde{x}\right)}{\operatorname{MAD}},
+    \label{eq:z-robusto}
+\end{equation}
+
+Esse escore é calculado somente quando $\operatorname{MAD}>0$. O fator 0,6745 aproxima o quantil 0,75 da distribuição normal padrão e fornece uma convenção de escala; não transforma o resultado em probabilidade de doença. Quando o MAD é zero, a mediana permanece disponível, mas a classificação é suspensa por dispersão insuficiente. Não se utilizam pisos numéricos por sensor, pois não foram identificadas evidências que validassem os valores anteriormente adotados para o hardware do projeto.
+
+Uma leitura é marcada como variação pessoal incomum quando $|z_i^{*}|>3{,}5$. O mesmo conjunto define a mediana exibida, o MAD e os escores, sem recálculo após a sinalização e sem exclusão automática de valores extremos. Essa escolha preserva a coerência entre a referência apresentada e a classificação, sem pressupor que um desvio estatístico seja erro de aquisição. A fórmula e o corte possuem precedente metodológico recente em Buljan et al. \cite{buljan2023framework}; como esse estudo trata de proteômica, sua aplicação aos sinais vitais constitui adaptação experimental e não validação clínica.
+
+Bosch et al. \cite{bosch2025travel} utilizam centralização pela mediana e normalização por MAD para frequência cardíaca individual obtida por ECG em situações cotidianas. Esse precedente sustenta a escolha de medidas robustas por participante, mas não valida o corte empregado neste protótipo. Sund Levander e Grodzinsky \cite{sundlevander2024individual} fundamentam a interpretação individual de temperatura e saturação, sem fornecer a configuração MAD adotada aqui. Assim, a fundamentação recente indexada no PubMed distingue a definição matemática, sua aplicação a dados cardíacos e os limites de transferência entre contextos.
+
+A análise é retrospectiva: todas as amostras elegíveis da janela participam da referência, inclusive a própria amostra avaliada e medições posteriores a ela. Não se trata de avaliação sequencial baseada apenas no passado. O algoritmo exclui valores não finitos, amostras fora do intervalo entre o momento atual e trinta dias antes e duplicatas de instante e valor por parâmetro. Os critérios de vinte amostras, quatorze dias de observação e janela de trinta dias são configurações experimentais de engenharia; não foi localizada validação da combinação para o TimeCare. A ausência de sinalização, especialmente com histórico insuficiente ou MAD zero, não indica normalidade. O método não distingue repouso, atividade ou período após medicação, não estima qualidade do sinal e não atribui causalidade a fármacos.
+
+\subsubsection{Delimitação experimental e plano de avaliação}
+
+A base metodológica específica do tratamento foi revisada com prioridade para publicações recentes indexadas no PubMed, com núcleo selecionado de 2023 a 2025. A busca foi dirigida, sem pretensão de revisão sistemática. Não se atribuem às referências valores de janela, quantidade mínima ou desempenho que elas não avaliaram. Em particular, o corte estatístico não representa uma faixa fisiológica validada para frequência cardíaca, SpO$_2$ ou temperatura.
+
+Na avaliação futura, deverão ser comparadas configurações de janela, quantidade de observações e corte, medindo-se disponibilidade de escore e taxa de sinalização diante de ruído, quantização, extremos e mudanças persistentes. Séries de ajuste e avaliação deverão permanecer separadas. A avaliação prospectiva exigirá referências construídas apenas com observações anteriores a cada leitura, diferentemente da exploração retrospectiva atual. A discretização e o limite superior da SpO$_2$ podem produzir assimetria e MAD zero; temperatura medida na pele não deve ser equiparada automaticamente à temperatura central.
+
+Wilson et al. \cite{wilson2025completeness} documentam discrepâncias entre medições vestíveis e de referência e seus efeitos nos alertas. Esse resultado reforça que robustez estatística não substitui verificação da aquisição nem validação por parâmetro.
+
+\subsubsection{Fluxo de processamento e segurança}
+
+O fluxo implementado compreende: consulta dos registros no Firebase; interpretação dos campos e dos instantes de coleta; separação das séries por parâmetro; seleção da janela temporal; verificação da quantidade e da distribuição mínima de amostras; cálculo da mediana, do MAD e do escore robusto; e apresentação das ocorrências para revisão. Os parâmetros experimentais estão concentrados em um módulo independente da interface, facilitando a comparação de configurações durante a validação.
+
+A aplicação deve ser caracterizada como protótipo de apoio ao acompanhamento, e não como dispositivo de diagnóstico ou sistema autônomo de decisão clínica. Uma ocorrência deve motivar a conferência das condições da medição e, quando pertinente, a orientação de um profissional. Ela não deve gerar automaticamente alteração de dose, interrupção de medicamento ou inferência diagnóstica.
+
+\subsubsection{Alertas e integração medicamentosa}
+
+A aplicação mantém horários e estados associados aos medicamentos, mas não agenda notificações persistentes do sistema operacional nem envia comandos diretos de alarme ao vestível. O firmware da caixa previamente desenvolvida já consulta os horários no Firebase, exibe o próximo medicamento e aciona LEDs e buzzer no horário correspondente, interrompendo a sinalização ao detectar abertura ou ao terminar o intervalo programado. Também atualiza o instante da última abertura. Assim, existe lógica de alerta local na caixa, enquanto a integração de alertas com o vestível e sua validação conjunta permanecem previstas. As mensagens transitórias do aplicativo informam o resultado de operações de cadastro e atualização.
+
+\subsection{Validação}
+
+A validação técnica da integração deverá verificar aquisição, instantes de coleta, transmissão, leitura e apresentação dos três parâmetros. A avaliação do processamento deverá considerar a correção dos cálculos de mediana, MAD e escore robusto, o atendimento aos requisitos mínimos de histórico e o tratamento de registros inválidos ou incompletos. A conformidade da implementação não equivale à validação de desempenho clínico.
+
+A validação do dispositivo físico exigirá comparação com instrumentos de referência e protocolo que controle posicionamento, movimento e intervalo entre as medições. Também deverá examinar separadamente frequência cardíaca, SpO$_2$ e temperatura, pois o desempenho de um sensor ou método para um parâmetro não implica desempenho equivalente para os demais \cite{haveman2021continuous}.
+
+Qualquer estudo com participantes e dados de saúde deverá ser precedido das autorizações éticas aplicáveis, de consentimento e de medidas de segurança e privacidade. Até essa etapa, não devem ser apresentadas conclusões sobre eficácia clínica, melhora da adesão ou detecção de reações adversas.
+
+\section{Estado atual e resultados esperados}
+
+O componente móvel já implementa cadastro de medicamentos, edição de perfil, preferências de acessibilidade, consulta de sinais vitais por período, média descritiva, referência pessoal robusta, listagem de ocorrências e exportação diária em PDF. A persistência e as consultas utilizam o Firebase Realtime Database por REST, sob um usuário de demonstração. Esses resultados correspondem à implementação de software, sem comprovar a operação integrada com o vestível. Como resultado futuro, espera-se obter o protótipo integrado e verificar a aquisição e a transmissão dos três parâmetros.
+
+Também se espera avaliar se a combinação de mediana, MAD e janela móvel é tecnicamente adequada ao conjunto de medições obtido pelo protótipo, incluindo sua estabilidade diante de valores extremos. Essa avaliação deverá informar possíveis ajustes na quantidade mínima de amostras, na duração da janela, no limiar do escore robusto e no tratamento de séries com dispersão insuficiente.
+
+O resultado pretendido não é comprovar automaticamente a ingestão de medicamentos nem detectar clinicamente reações adversas. Busca-se produzir um histórico organizado que permita ao usuário visualizar mudanças em seu padrão recente e compartilhar medições com um profissional quando necessário. A literatura sobre monitoramento vestível ainda apresenta limitações e resultados heterogêneos, razão pela qual qualquer benefício assistencial deverá ser avaliado em estudos posteriores com protocolo apropriado \cite{leenen2020current}.
+
+\bibliographystyle{sbc}
+\bibliography{references,references_metodo}
+
+\end{document}

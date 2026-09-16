@@ -257,7 +257,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                               const SizedBox(height: 10), // Increased spacing
                               _LegendRow(
                                 color: pieColors[0],
-                                label: '${pieLabels[0]} (${remedios_corretos})',
+                                label: '${pieLabels[0]} ($remedios_corretos)',
                               ),
                               const SizedBox(
                                 height: 6,
@@ -265,7 +265,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                               _LegendRow(
                                 color: pieColors[1],
                                 label:
-                                    '${pieLabels[1]} (${remedios_atrasados})',
+                                    '${pieLabels[1]} ($remedios_atrasados)',
                               ),
                               const SizedBox(
                                 height: 6,
@@ -273,7 +273,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                               _LegendRow(
                                 color: pieColors[2],
                                 label:
-                                    '${pieLabels[2]} (${remedios_naotomados})',
+                                    '${pieLabels[2]} ($remedios_naotomados)',
                               ),
                             ],
                           ),

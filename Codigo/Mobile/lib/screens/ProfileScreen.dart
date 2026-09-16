@@ -11,11 +11,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   // Placeholder data for demonstration
-  String _userName = 'Vitor Militão';
-  String _userEmail = 'vitor@email.com';
-  int _medicinesTaken = 12;
-  int _medicinesPending = 2;
-  int _medicineGoal = 14;
+  final String _userName = 'Vitor Militão';
+  final String _userEmail = 'vitor@email.com';
+  final int _medicinesTaken = 12;
+  final int _medicinesPending = 2;
+  final int _medicineGoal = 14;
 
   // This function would typically fetch real user data
   void _fetchUserData() {
@@ -97,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 4,
                       ),
                     ],
