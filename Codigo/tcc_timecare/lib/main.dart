@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:tcc_timecare/screens/Medicine_screen.dart';
-import 'package:tcc_timecare/screens/ProfileScreen.dart';
+import 'package:tcc_timecare/services/patient_profile.dart';
+import 'package:tcc_timecare/screens/medicines_screen.dart';
+import 'package:tcc_timecare/screens/profile_screen.dart';
 import 'package:tcc_timecare/screens/analysis_screen.dart';
 import 'package:tcc_timecare/screens/occurrences_screen.dart';
 import 'package:tcc_timecare/screens/firebase_options.dart';
@@ -51,28 +51,16 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'TimeCare',
       themeMode: appPreferences.themeMode,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        colorSchemeSeed: appPreferences.highContrast
-            ? Colors.indigo
-            : Colors.blue,
-        fontFamily: GoogleFonts.poppins().fontFamily,
-        scaffoldBackgroundColor: appPreferences.highContrast
-            ? Colors.white
-            : const Color(0xFFF7F9FC),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorSchemeSeed: appPreferences.highContrast
-            ? Colors.yellow
-            : Colors.blue,
-        fontFamily: GoogleFonts.poppins().fontFamily,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-      ),
+      theme: buildAppTheme(Brightness.light),
+      darkTheme: buildAppTheme(Brightness.dark),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(appPreferences.textScale)),
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(
+            MediaQuery.textScalerOf(context).scale(16) /
+                16 *
+                appPreferences.textScale,
+          ),
+        ),
         child: child ?? const SizedBox.shrink(),
       ),
       home: const HomeScreen(),
@@ -93,6 +81,28 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     pc = PageController();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      await patientProfile.load();
+      final saved = patientProfile.data['preferences'];
+      if (saved is Map) {
+        appPreferences.update(
+          themeMode: ThemeMode.values.firstWhere(
+            (t) => t.name == saved['theme'],
+            orElse: () => ThemeMode.system,
+          ),
+          textScale: saved['textScale'] is num
+              ? (saved['textScale'] as num).toDouble()
+              : 1,
+          highContrast: saved['highContrast'] == true,
+        );
+      }
+    } catch (_) {
+      // Profile has a retry action; the medicine list stays available.
+    }
   }
 
   @override
@@ -105,6 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) => Scaffold(
     body: PageView(
       controller: pc,
+      physics: const NeverScrollableScrollPhysics(),
       onPageChanged: (index) => setState(() => selected = index),
       children: const [
         MedicineScreen(),
@@ -141,6 +152,50 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'Perfil',
         ),
       ],
+    ),
+  );
+}
+
+ThemeData buildAppTheme(Brightness brightness) {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: const Color(0xFF246B78),
+    brightness: brightness,
+    contrastLevel: appPreferences.highContrast ? 1 : 0,
+  );
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: scheme.surface,
+    appBarTheme: AppBarTheme(
+      centerTitle: false,
+      backgroundColor: scheme.surface,
+      foregroundColor: scheme.onSurface,
+      elevation: 0,
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      color: scheme.surfaceContainerLow,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: scheme.surfaceContainerLow,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: const EdgeInsets.all(16),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 52),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      indicatorColor: scheme.secondaryContainer,
     ),
   );
 }

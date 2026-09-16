@@ -5,13 +5,14 @@ import 'package:tcc_timecare/services/vital_baseline_algorithm.dart';
 import 'package:tcc_timecare/services/vital_reading.dart';
 
 class OccurrencesScreen extends StatefulWidget {
-  const OccurrencesScreen({super.key});
+  const OccurrencesScreen({super.key, this.database});
+  final RealtimeDatabaseRest? database;
   @override
   State<OccurrencesScreen> createState() => _OccurrencesScreenState();
 }
 
 class _OccurrencesScreenState extends State<OccurrencesScreen> {
-  final _database = RealtimeDatabaseRest.instance;
+  late final _database = widget.database ?? RealtimeDatabaseRest.instance;
   late Future<Object?> _future;
   @override
   void initState() {
@@ -23,7 +24,11 @@ class _OccurrencesScreenState extends State<OccurrencesScreen> {
     setState(() {
       _future = _database.get('user_test/sinais_vitais');
     });
-    await _future;
+    try {
+      await _future;
+    } catch (_) {
+      /* Rendered by FutureBuilder. */
+    }
   }
 
   @override
@@ -31,15 +36,31 @@ class _OccurrencesScreenState extends State<OccurrencesScreen> {
     appBar: AppBar(
       title: const Text('Ocorrências'),
       actions: [
-        IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+        IconButton(
+          tooltip: 'Atualizar ocorrências',
+          onPressed: _refresh,
+          icon: const Icon(Icons.refresh),
+        ),
       ],
     ),
     body: FutureBuilder<Object?>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(
-            child: Text('Não foi possível carregar as ocorrências.'),
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Não foi possível carregar as ocorrências.',
+                  textAlign: TextAlign.center,
+                ),
+                TextButton(
+                  onPressed: _refresh,
+                  child: const Text('Tentar novamente'),
+                ),
+              ],
+            ),
           );
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -50,6 +71,7 @@ class _OccurrencesScreenState extends State<OccurrencesScreen> {
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
               Card(

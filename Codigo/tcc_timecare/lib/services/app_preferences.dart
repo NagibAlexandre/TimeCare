@@ -10,7 +10,11 @@ class AppPreferences extends ChangeNotifier {
   bool get highContrast => _highContrast;
 
   void update({ThemeMode? themeMode, double? textScale, bool? highContrast}) {
-    final changed = (themeMode != null && themeMode != _themeMode) ||
+    if (textScale != null) {
+      textScale = textScale.isFinite ? textScale.clamp(.9, 1.4) : 1;
+    }
+    final changed =
+        (themeMode != null && themeMode != _themeMode) ||
         (textScale != null && textScale != _textScale) ||
         (highContrast != null && highContrast != _highContrast);
     if (!changed) return;

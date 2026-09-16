@@ -10,16 +10,16 @@ import 'package:tcc_timecare/services/vital_reading.dart';
 /// `user_test/sinais_vitais`. Both a list keyed by timestamp and a map of
 /// readings are supported, so older firmware does not break the application.
 class AnalysisScreen extends StatefulWidget {
-  const AnalysisScreen({super.key});
+  const AnalysisScreen({super.key, this.database});
+  final RealtimeDatabaseRest? database;
 
   @override
   State<AnalysisScreen> createState() => _AnalysisScreenState();
 }
 
 class _AnalysisScreenState extends State<AnalysisScreen> {
-  final _database = RealtimeDatabaseRest.instance;
+  late final _database = widget.database ?? RealtimeDatabaseRest.instance;
   late Future<Object?> _vitalsFuture;
-  List<VitalReading> _latestReadings = const [];
   int _days = 7;
 
   @override
@@ -32,7 +32,11 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     setState(() {
       _vitalsFuture = _database.get('user_test/sinais_vitais');
     });
-    await _vitalsFuture;
+    try {
+      await _vitalsFuture;
+    } catch (_) {
+      /* Rendered by FutureBuilder. */
+    }
   }
 
   Future<void> _exportPdf(List<VitalReading> readings) async {
@@ -104,10 +108,21 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       appBar: AppBar(
         title: const Text('Sinais vitais'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            tooltip: 'Gerar recibo em PDF',
-            onPressed: () => _exportPdf(_latestReadings),
+          FutureBuilder<Object?>(
+            future: _vitalsFuture,
+            builder: (context, snapshot) {
+              final readings = VitalReading.parse(snapshot.data);
+              return IconButton(
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                tooltip: 'Exportar medições em PDF',
+                onPressed:
+                    snapshot.connectionState != ConnectionState.done ||
+                        snapshot.hasError ||
+                        readings.isEmpty
+                    ? null
+                    : () => _exportPdf(readings),
+              );
+            },
           ),
         ],
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
@@ -118,13 +133,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         future: _vitalsFuture,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return _ErrorState(error: snapshot.error.toString());
+            return _ErrorState(onRetry: _refresh);
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           final all = VitalReading.parse(snapshot.data);
-          _latestReadings = all;
           final limit = DateTime.now().subtract(Duration(days: _days));
           final readings = all
               .where((item) => item.timestamp.isAfter(limit))
@@ -132,6 +146,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
                 _Header(readings: readings),
@@ -246,7 +261,7 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${readings.length} registros no período; ${readings.where((r) => r.simulated).length} sinalizados como simulados. Análise estatística experimental, sem diagnóstico.',
-            style: TextStyle(color: foreground.withValues(alpha: .75)),
+            style: TextStyle(color: foreground),
           ),
         ],
       ),
@@ -343,13 +358,8 @@ class _Summary extends StatelessWidget {
               : "Resumo e referência: dados simulados para teste.",
         ),
         const SizedBox(height: 8),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 0.85,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: items
               .map(
                 (item) => Card(
@@ -359,7 +369,7 @@ class _Summary extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(item.icon, color: item.color),
-                        const Spacer(),
+                        const SizedBox(height: 12),
                         Text(
                           item.label,
                           style: TextStyle(
@@ -374,7 +384,7 @@ class _Summary extends StatelessWidget {
                               : 'Média: ${item.value!.toStringAsFixed(1)} ${item.unit}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontSize: 18,
                           ),
                         ),
                         Text(
@@ -382,7 +392,7 @@ class _Summary extends StatelessWidget {
                               ? 'Mediana: ${item.baseline.personalMedian!.toStringAsFixed(1)} ${item.unit}${item.baseline.canScore ? '' : ' (MAD zero; sem escore)'}'
                               : 'Calibrando: ${item.baseline.samples.length}/${item.baseline.config.minimumSamples}',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 14,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurfaceVariant,
@@ -469,15 +479,21 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.error});
-  final String error;
+  const _ErrorState({required this.onRetry});
+  final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
       padding: const EdgeInsets.all(24),
-      child: Text(
-        'Não foi possível carregar os sinais vitais.\n$error',
-        textAlign: TextAlign.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Não foi possível carregar os sinais vitais.',
+            textAlign: TextAlign.center,
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Tentar novamente')),
+        ],
       ),
     ),
   );

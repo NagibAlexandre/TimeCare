@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tcc_timecare/services/realtime_database_rest.dart';
+import 'package:tcc_timecare/services/patient_profile.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key, required this.initialData});
@@ -55,12 +55,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       return;
     }
+    if (_saving) return;
+    final age = int.tryParse(_age.text.trim());
+    if (_age.text.trim().isNotEmpty && (age == null || age < 0 || age > 130)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe uma idade válida, de 0 a 130 anos.'),
+        ),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
-      await RealtimeDatabaseRest.instance.patch('user_test', {
+      await patientProfile.save({
         'name': _name.text.trim(),
         'email': _email.text.trim(),
-        'idade': int.tryParse(_age.text.trim()) ?? _age.text.trim(),
+        'idade': age,
         'telefone': _phone.text.trim(),
         'sexAtBirth': _sex,
         'genderIdentity': _gender.text.trim(),
@@ -71,10 +81,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       if (mounted) Navigator.pop(context, true);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Não foi possível salvar o perfil.')),
         );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -175,12 +186,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
     child: TextField(
+      enabled: !_saving,
       controller: controller,
       keyboardType: type,
       maxLines: lines,
       decoration: InputDecoration(
         labelText: label,
         helperText: helper,
+        helperMaxLines: 3,
         prefixIcon: Icon(icon),
         border: const OutlineInputBorder(),
       ),
@@ -194,7 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   ) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
     child: DropdownButtonFormField(
-      value: items.contains(value) ? value : items.first,
+      initialValue: items.contains(value) ? value : items.first,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
@@ -202,7 +215,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       items: items
           .map((item) => DropdownMenuItem(value: item, child: Text(item)))
           .toList(),
-      onChanged: onChanged,
+      isExpanded: true,
+      onChanged: _saving ? null : onChanged,
     ),
   );
 }

@@ -43,6 +43,26 @@ flutter pub get
 flutter run
 ```
 
+## Perfil e interface
+
+A foto é persistida em `user_test/photoBase64` e compartilhada entre o perfil e a
+tela de remédios. A interface só confirma o salvamento depois da resposta do banco;
+uma falha mantém a foto anterior. Editar os dados pessoais não substitui a foto nem
+os medicamentos. As preferências de aparência são carregadas na abertura do app.
+
+Para verificar as mudanças:
+
+```bash
+flutter analyze
+flutter test
+flutter build web
+```
+
+Os testes usam um banco simulado e cobrem persistência, falhas de salvamento,
+leituras concorrentes, recuperação de conexão e telas de 360 px com texto em
+100% e 200%, nos temas claro e escuro. O seletor de fotos e as permissões de
+galeria ainda precisam ser exercitados em um aparelho real.
+
 ## Simular sinais vitais sem ESP32
 
 Use o script externo abaixo para inserir leituras plausíveis no mesmo nó que o aplicativo consulta. Ele requer somente Python 3:

@@ -3,16 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:tcc_timecare/services/realtime_database_rest.dart';
+import 'package:tcc_timecare/services/patient_profile.dart';
+import 'package:tcc_timecare/widgets/patient_avatar.dart';
 
 class MedicineScreen extends StatefulWidget {
-  const MedicineScreen({super.key});
+  const MedicineScreen({super.key, this.database});
+  final RealtimeDatabaseRest? database;
 
   @override
   State<MedicineScreen> createState() => _MedicineScreenState();
 }
 
 class _MedicineScreenState extends State<MedicineScreen> {
-  final _database = RealtimeDatabaseRest.instance;
+  late final _database = widget.database ?? RealtimeDatabaseRest.instance;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
@@ -20,7 +23,6 @@ class _MedicineScreenState extends State<MedicineScreen> {
   TimeOfDay? _selectedTime;
 
   late Future<Object?> _medicinesFuture;
-  late Future<Object?> _userFuture;
 
   @override
   void initState() {
@@ -28,15 +30,17 @@ class _MedicineScreenState extends State<MedicineScreen> {
     // Avoid Firebase EventChannels on Windows: their native database SDK can
     // dispatch callbacks off the platform thread and terminate the app.
     _medicinesFuture = _database.get('user_test/remedios');
-    _userFuture = _database.get('user_test');
   }
 
   Future<void> _reloadData() async {
     setState(() {
       _medicinesFuture = _database.get('user_test/remedios');
-      _userFuture = _database.get('user_test');
     });
-    await _medicinesFuture;
+    try {
+      await _medicinesFuture;
+    } catch (_) {
+      /* Rendered by FutureBuilder. */
+    }
   }
 
   @override
@@ -52,16 +56,6 @@ class _MedicineScreenState extends State<MedicineScreen> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: CupertinoColors.systemBlue,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() {
@@ -150,10 +144,10 @@ class _MedicineScreenState extends State<MedicineScreen> {
   }
 
   Future<void> _addMedicine() async {
-    if (_nameController.text.isEmpty || _timeController.text.isEmpty) {
+    if (_nameController.text.trim().isEmpty || _selectedTime == null) {
       _showModernNotification(
         context,
-        'Preencha todos os campos',
+        'Informe o nome e o horário do remédio.',
         isError: true,
       );
       return;
@@ -286,7 +280,15 @@ class _MedicineScreenState extends State<MedicineScreen> {
             CupertinoActionSheetAction(
               onPressed: () async {
                 try {
-                  // Only update name and scheduled_time for now
+                  if (_nameController.text.trim().isEmpty ||
+                      _selectedTime == null) {
+                    _showModernNotification(
+                      this.context,
+                      'Informe o nome e o horário do remédio.',
+                      isError: true,
+                    );
+                    return;
+                  }
                   await _database.patch('user_test/remedios/$key', {
                     'name': _nameController.text,
                     'dosage': _dosageController.text,
@@ -302,14 +304,14 @@ class _MedicineScreenState extends State<MedicineScreen> {
                   _instructionsController.clear();
                   _selectedTime = null;
                   await _reloadData();
-                  if (!mounted) return;
+                  if (!mounted || !context.mounted) return;
                   Navigator.of(context, rootNavigator: true).pop();
                   _showModernNotification(
                     context,
                     'Medicamento atualizado com sucesso',
                   );
                 } catch (e) {
-                  if (!mounted) return;
+                  if (!mounted || !context.mounted) return;
                   _showModernNotification(
                     context,
                     'Erro ao atualizar: $e',
@@ -434,6 +436,11 @@ class _MedicineScreenState extends State<MedicineScreen> {
   }
 
   void _showAddMedicineDialog() {
+    _nameController.clear();
+    _dosageController.clear();
+    _instructionsController.clear();
+    _timeController.clear();
+    _selectedTime = null;
     showCupertinoModalPopup(
       context: context,
       builder: (BuildContext context) {
@@ -527,130 +534,52 @@ class _MedicineScreenState extends State<MedicineScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-        elevation: 0,
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // StreamBuilder for user data
-              FutureBuilder<Object?>(
-                future: _userFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Text(
-                      'Erro: ${snapshot.error}',
-                      style: TextStyle(color: CupertinoColors.systemRed),
-                    );
-                  }
-
-                  if (!snapshot.hasData) {
-                    return const CupertinoActivityIndicator(); // Loading indicator while fetching user data
-                  }
-
-                  // Extract user data
-                  final userValue = snapshot.data;
-                  final userData = userValue is Map
-                      ? Map<dynamic, dynamic>.from(userValue)
-                      : <dynamic, dynamic>{};
-                  final userName =
-                      userData?['name'] ??
-                      'Nome do Usuário'; // Assuming name is stored under 'nome'
-
-                  return Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: CupertinoColors
-                              .systemBlue, // Changed color to a primary blue
-                          borderRadius: BorderRadius.circular(
-                            20,
-                          ), // Keep it circular
-                        ),
-                        child: const Icon(
-                          CupertinoIcons.person,
-                          color: Colors.white, // Keep icon color white
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userName, // Display fetched user name
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            (userData?['idade'] ?? 13)
-                                .toString(), // Convert int to String
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: CupertinoColors.systemGrey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Meus Remédios',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          CupertinoIcons.paintbrush,
-                          color: CupertinoColors.systemRed,
-                        ),
-                        onPressed: () {
-                          _showDeleteAllConfirmation();
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          CupertinoIcons.arrow_counterclockwise,
-                          color: CupertinoColors.systemGrey,
-                        ),
-                        onPressed: _reloadData,
-                      ),
-                    ],
-                  ),
-                ],
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: ListenableBuilder(
+            listenable: patientProfile,
+            builder: (context, _) =>
+                PatientAvatar(data: patientProfile.data, radius: 20),
+          ),
+        ),
+        title: const Text('Remédios'),
+        actions: [
+          IconButton(
+            tooltip: 'Atualizar remédios',
+            onPressed: _reloadData,
+            icon: const Icon(Icons.refresh),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Mais opções',
+            onSelected: (_) => _showDeleteAllConfirmation(),
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'deleteAll',
+                child: Text('Excluir todos os remédios'),
               ),
             ],
           ),
-        ),
-        toolbarHeight: 120, // Adjust height to accommodate the custom title
+        ],
       ),
       body: FutureBuilder<Object?>(
         future: _medicinesFuture,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Erro: ${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Não foi possível carregar os remédios.'),
+                  TextButton(
+                    onPressed: _reloadData,
+                    child: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            );
           }
 
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CupertinoActivityIndicator());
           }
 
@@ -658,7 +587,7 @@ class _MedicineScreenState extends State<MedicineScreen> {
           final medicinesMap = rawMedicines is Map
               ? Map<dynamic, dynamic>.from(rawMedicines)
               : null;
-          if (medicinesMap == null) {
+          if (medicinesMap == null || medicinesMap.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -666,14 +595,14 @@ class _MedicineScreenState extends State<MedicineScreen> {
                   Icon(
                     CupertinoIcons.heart,
                     size: 64,
-                    color: CupertinoColors.systemGrey,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Nenhum medicamento cadastrado',
                     style: TextStyle(
                       fontSize: 18,
-                      color: CupertinoColors.systemGrey,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -712,26 +641,23 @@ class _MedicineScreenState extends State<MedicineScreen> {
           });
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             itemCount: medicinesList.length, // Removed the +1
             itemBuilder: (context, index) {
               final medicine = medicinesList[index];
               // Use a custom Card structure instead of ListTile for better control
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                elevation: 2, // Add some elevation for depth
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12), // Rounded corners
-                ),
-                color: Theme.of(context).cardColor,
+
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Left side icon
-                      GestureDetector(
-                        onTap: () {
+                      IconButton(
+                        tooltip: 'Situação do remédio',
+                        onPressed: () {
                           if (medicine['status'] != 'on-time' &&
                               medicine['status'] != 'late-time') {
                             showCupertinoModalPopup(
@@ -763,7 +689,7 @@ class _MedicineScreenState extends State<MedicineScreen> {
                             );
                           }
                         },
-                        child: Icon(
+                        icon: Icon(
                           medicine['status'] == 'on-time'
                               ? CupertinoIcons.checkmark_circle_fill
                               : medicine['status'] == 'late-time'
@@ -777,12 +703,20 @@ class _MedicineScreenState extends State<MedicineScreen> {
                           size: 24.0,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
                       // Middle content
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              medicine['status'] == 'on-time'
+                                  ? 'No horário'
+                                  : medicine['status'] == 'late-time'
+                                  ? 'Em atraso'
+                                  : 'Pendente',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
                             Text(
                               medicine['name'],
                               style: const TextStyle(
@@ -791,19 +725,14 @@ class _MedicineScreenState extends State<MedicineScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            // Displaying "Tipo" (assuming it's the 'instructions' field or similar,
-                            // or maybe it's a hardcoded value in the image?)
-                            // Based on OCR, "Tipo" has values like 321 and 132.
-                            // Let's use the 'instructions' field for "Tipo" for now, as 'dosage' is
-                            // already displayed as "Dosagem". If 'instructions' is empty, maybe
-                            // display 'dosage' under "Tipo"? Or add a new field to the data?
-                            // For now, let's assume 'instructions' is "Tipo".
                             if ((medicine['instructions'] as String).isNotEmpty)
                               Text(
-                                'Tipo: ${medicine['instructions']}', // Assuming 'instructions' is 'Tipo'
+                                'Orientações: ${medicine['instructions']}',
                                 style: TextStyle(
                                   fontSize: 15,
-                                  color: CupertinoColors.systemGrey,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             const SizedBox(height: 4),
@@ -813,7 +742,9 @@ class _MedicineScreenState extends State<MedicineScreen> {
                                 'Horário: ${_formatTimeOfDay(_parseTimeOfDayFromIso8601(medicine['scheduled_time']))}',
                                 style: TextStyle(
                                   fontSize: 15,
-                                  color: CupertinoColors.systemGrey,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             const SizedBox(height: 4),
@@ -822,7 +753,9 @@ class _MedicineScreenState extends State<MedicineScreen> {
                                 'Dosagem: ${medicine['dosage']}',
                                 style: TextStyle(
                                   fontSize: 15,
-                                  color: CupertinoColors.systemGrey,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                           ],
@@ -884,9 +817,9 @@ class _MedicineScreenState extends State<MedicineScreen> {
                             },
                           );
                         },
-                        child: const Icon(
+                        child: Icon(
                           CupertinoIcons.ellipsis,
-                          color: CupertinoColors.systemGrey,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -897,14 +830,14 @@ class _MedicineScreenState extends State<MedicineScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddMedicineDialog,
-        backgroundColor: CupertinoColors.systemBlue,
-        foregroundColor: Colors.white,
+
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15), // Rounded corners for FAB
         ),
-        child: const Icon(CupertinoIcons.plus),
+        icon: const Icon(Icons.add),
+        label: const Text('Adicionar remédio'),
       ),
     );
   }
