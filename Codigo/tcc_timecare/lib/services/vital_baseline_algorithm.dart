@@ -7,10 +7,10 @@ enum VitalMetric { heartRate, spo2, temperature }
 class VitalAlgorithmConfig {
   const VitalAlgorithmConfig({
     this.minimumSamples = 20,
-    this.minimumObservationDays = 14,
+    this.minimumObservationDays = 0,
     this.baselineWindowDays = 30,
     this.robustZThreshold = 3.5,
-    this.algorithmVersion = 'baseline-mad-v2',
+    this.algorithmVersion = 'baseline-mad-v3-quick',
   });
 
   final int minimumSamples;

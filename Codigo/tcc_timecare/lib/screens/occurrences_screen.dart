@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:tcc_timecare/services/realtime_database_rest.dart';
-import 'package:tcc_timecare/services/vital_baseline_algorithm.dart';
+import 'package:tcc_timecare/services/vital_occurrence_analyzer.dart';
 import 'package:tcc_timecare/services/vital_reading.dart';
+import 'package:tcc_timecare/widgets/vital_quality_notice.dart';
 
 class OccurrencesScreen extends StatefulWidget {
   const OccurrencesScreen({super.key, this.database});
@@ -67,7 +68,9 @@ class _OccurrencesScreenState extends State<OccurrencesScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         final readings = VitalReading.parse(snapshot.data);
-        final occurrences = _occurrences(readings);
+        final episodes = const VitalOccurrenceAnalyzer().analyze(readings);
+        final occurrences = episodes.where((e) => e.sustained).toList();
+        final unconfirmed = episodes.where((e) => !e.sustained).toList();
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
@@ -79,72 +82,79 @@ class _OccurrencesScreenState extends State<OccurrencesScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Text(
                     occurrences.isEmpty
-                        ? 'Nenhum desvio sinalizado. Isso também pode ocorrer por histórico insuficiente ou MAD zero; não significa normalidade. Análise experimental: 20 leituras, intervalo mínimo de 14 dias, janela de 30 dias. Dados simulados são analisados separadamente.'
-                        : '${occurrences.length} ocorrência(s) marcada(s). Análise estatística experimental, sem diagnóstico; confira a medição e considere orientação profissional se necessário.',
+                        ? 'Nenhuma alteração persistente identificada. Histórico insuficiente ou pouca variação também podem impedir a avaliação; isso não significa normalidade.'
+                        : '${occurrences.length} episódio(s) persistente(s). Leituras repetidas agrupadas por parâmetro, sem diagnóstico.',
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              ...occurrences.map(
-                (item) => Card(
-                  child: ListTile(
-                    leading: const Icon(
-                      Icons.info_outline,
-                      color: Colors.orange,
-                    ),
-                    title: Text(item.description),
-                    subtitle: Text(
-                      DateFormat("dd/MM/yyyy 'às' HH:mm").format(item.time),
-                    ),
-                    trailing: Text('z ${item.z.toStringAsFixed(1)}'),
-                  ),
-                ),
+              VitalQualityNotice(readings: readings),
+              const Text(
+                'A alteração precisa se repetir por pelo menos 40 segundos. Falhas de coleta interrompem a confirmação. Persistência não comprova a causa.',
               ),
+              const SizedBox(height: 12),
+              ...occurrences.map((item) => _EpisodeCard(episode: item)),
+              if (unconfirmed.isNotEmpty)
+                ExpansionTile(
+                  title: const Text('Desvios não confirmados'),
+                  subtitle: const Text(
+                    'Picos breves ou sem continuidade. Repita a medição; podem ser alterações reais ou artefatos.',
+                  ),
+                  children: unconfirmed
+                      .map((item) => _EpisodeCard(episode: item))
+                      .toList(),
+                ),
             ],
           ),
         );
       },
     ),
   );
-
-  List<_Occurrence> _occurrences(List<VitalReading> readings) {
-    const analyzer = VitalBaselineAnalyzer();
-    final output = <_Occurrence>[];
-    for (final simulated in [false, true]) {
-      for (final entry
-          in <(VitalMetric, String, double? Function(VitalReading))>[
-            (VitalMetric.heartRate, 'Frequência cardíaca', (r) => r.heartRate),
-            (VitalMetric.spo2, 'Oxigenação', (r) => r.spo2),
-            (VitalMetric.temperature, 'Temperatura', (r) => r.temperature),
-          ]) {
-        final result = analyzer.analyze(
-          entry.$1,
-          readings
-              .where((r) => entry.$3(r) != null && r.simulated == simulated)
-              .map(
-                (r) => VitalSample(timestamp: r.timestamp, value: entry.$3(r)!),
-              ),
-        );
-        if (!result.isReady) continue;
-        for (final sample in result.samples.where((s) => s.isOutlier)) {
-          output.add(
-            _Occurrence(
-              sample.sample.timestamp,
-              '${simulated ? 'SIMULADA • ' : ''}${entry.$2}: ${sample.sample.value.toStringAsFixed(1)}',
-              sample.robustZScore!.abs(),
-            ),
-          );
-        }
-      }
-    }
-    output.sort((a, b) => b.time.compareTo(a.time));
-    return output;
-  }
 }
 
-class _Occurrence {
-  const _Occurrence(this.time, this.description, this.z);
-  final DateTime time;
-  final String description;
-  final double z;
+class _EpisodeCard extends StatelessWidget {
+  const _EpisodeCard({required this.episode});
+  final VitalEpisode episode;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = episode;
+    final date = DateFormat('dd/MM HH:mm:ss');
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${e.simulated ? 'SIMULADO • ' : ''}${e.label}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              e.sustained
+                  ? 'Alteração persistente'
+                  : 'Sem confirmação temporal',
+              style: TextStyle(
+                color: e.sustained
+                    ? Colors.orange
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            Text(
+              '${e.extreme.toStringAsFixed(1)} ${e.unit} • ${e.above ? 'acima' : 'abaixo'} da referência pessoal',
+            ),
+            Text(
+              '${date.format(e.start)} — ${DateFormat('HH:mm:ss').format(e.end)}',
+            ),
+            Text('Duração observada: ${e.duration.inSeconds} s'),
+            if (e.sustained)
+              const Text(
+                'Confira o sensor e repita a medição. A persistência também pode ocorrer em falhas contínuas do sensor.',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

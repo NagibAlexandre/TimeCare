@@ -15,16 +15,26 @@ void main() {
     ),
   );
 
-  test('default requirements independently enforce count and elapsed span', () {
+  test('default reference requires count without waiting days', () {
     expect(
       analyzer.analyze(VitalMetric.heartRate, series(19), now: now).isReady,
       false,
     );
     expect(
       analyzer
-          .analyze(VitalMetric.heartRate, series(20, span: 13), now: now)
+          .analyze(
+            VitalMetric.heartRate,
+            List.generate(
+              20,
+              (i) => VitalSample(
+                timestamp: now.subtract(Duration(seconds: i)),
+                value: 65.0 + i % 11,
+              ),
+            ),
+            now: now,
+          )
           .isReady,
-      false,
+      true,
     );
     expect(
       analyzer.analyze(VitalMetric.heartRate, series(20), now: now).isReady,

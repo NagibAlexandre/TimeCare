@@ -5,6 +5,9 @@ import 'package:tcc_timecare/services/realtime_database_rest.dart';
 import 'package:tcc_timecare/services/vital_baseline_algorithm.dart';
 import 'package:tcc_timecare/services/vital_report_pdf.dart';
 import 'package:tcc_timecare/services/vital_reading.dart';
+import 'package:tcc_timecare/services/vital_minute_display.dart';
+import 'package:tcc_timecare/services/vital_occurrence_analyzer.dart';
+import 'package:tcc_timecare/widgets/vital_quality_notice.dart';
 
 /// Displays the readings published by the ESP32 under
 /// `user_test/sinais_vitais`. Both a list keyed by timestamp and a map of
@@ -66,23 +69,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       final profile = rawProfile is Map
           ? Map<Object?, Object?>.from(rawProfile)
           : <Object?, Object?>{};
-      final data = selectedReadings
-          .map(
-            (item) => <String, Object?>{
-              'time': DateFormat('HH:mm').format(item.timestamp),
-              'source': item.simulated
-                  ? 'Simulada'
-                  : 'Não sinalizada como simulada',
-              'heartRate': item.heartRate == null
-                  ? '-'
-                  : '${item.heartRate!.round()} bpm',
-              'spo2': item.spo2 == null ? '-' : '${item.spo2!.round()}%',
-              'temperature': item.temperature == null
-                  ? '-'
-                  : '${item.temperature!.toStringAsFixed(1)} C',
-            },
-          )
-          .toList();
+      final data = VitalReportPdf.readingRows(selectedReadings);
       final bytes = await VitalReportPdf.build(
         profile: profile,
         date: selected,
@@ -139,6 +126,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           final all = VitalReading.parse(snapshot.data);
+          final persistentEpisodes = const VitalOccurrenceAnalyzer()
+              .analyze(all)
+              .where((e) => e.sustained)
+              .toList();
           final limit = DateTime.now().subtract(Duration(days: _days));
           final readings = all
               .where((item) => item.timestamp.isAfter(limit))
@@ -157,21 +148,34 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 ),
                 const SizedBox(height: 16),
                 _Summary(readings: readings, baselineReadings: all),
+                VitalQualityNotice(readings: readings),
                 const SizedBox(height: 20),
                 Text(
-                  'Medições recentes',
+                  'Medições por minuto',
                   style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const Text(
+                  'Valores aproximados pela mediana de cada minuto. PDF com todas as leituras.',
                 ),
                 const SizedBox(height: 8),
                 if (readings.isEmpty)
                   const _EmptyState()
                 else
-                  ...readings
+                  ...VitalMinuteDisplay.group(readings)
                       .take(30)
                       .map(
                         (reading) => _ReadingCard(
                           reading: reading,
-                          isOutlier: _isOutlier(reading, all),
+                          isOutlier: reading.readings.any(
+                            (r) => persistentEpisodes.any(
+                              (e) =>
+                                  e.simulated == r.simulated &&
+                                  e.samples.any(
+                                    (sample) =>
+                                        sample.sample.timestamp == r.timestamp,
+                                  ),
+                            ),
+                          ),
                         ),
                       ),
               ],
@@ -181,53 +185,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       ),
     );
   }
-
-  bool _isOutlier(VitalReading reading, List<VitalReading> all) {
-    final analyzer = const VitalBaselineAnalyzer();
-    final checks = <(VitalMetric, double?)>[
-      (VitalMetric.heartRate, reading.heartRate),
-      (VitalMetric.spo2, reading.spo2),
-      (VitalMetric.temperature, reading.temperature),
-    ];
-    for (final check in checks) {
-      if (check.$2 == null) continue;
-      final result = analyzer.analyze(
-        check.$1,
-        _samples(
-          all.where((item) => item.simulated == reading.simulated).toList(),
-          check.$1,
-        ),
-      );
-      if (result.samples.any(
-        (sample) =>
-            sample.sample.timestamp == reading.timestamp &&
-            sample.sample.value == check.$2 &&
-            sample.isOutlier,
-      )) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  List<VitalSample> _samples(List<VitalReading> readings, VitalMetric metric) =>
-      readings
-          .map(
-            (reading) => switch (metric) {
-              VitalMetric.heartRate => reading.heartRate,
-              VitalMetric.spo2 => reading.spo2,
-              VitalMetric.temperature => reading.temperature,
-            },
-          )
-          .indexed
-          .where((entry) => entry.$2 != null)
-          .map(
-            (entry) => VitalSample(
-              timestamp: readings[entry.$1].timestamp,
-              value: entry.$2!,
-            ),
-          )
-          .toList();
 }
 
 class _Header extends StatelessWidget {
@@ -390,7 +347,7 @@ class _Summary extends StatelessWidget {
                         Text(
                           item.baseline.isReady
                               ? 'Mediana: ${item.baseline.personalMedian!.toStringAsFixed(1)} ${item.unit}${item.baseline.canScore ? '' : ' (MAD zero; sem escore)'}'
-                              : 'Calibrando: ${item.baseline.samples.length}/${item.baseline.config.minimumSamples}',
+                              : 'Referência inicial: ${item.baseline.samples.length}/${item.baseline.config.minimumSamples} leituras válidas (sem espera em dias)',
                           style: TextStyle(
                             fontSize: 14,
                             color: Theme.of(
@@ -428,30 +385,33 @@ class _Metric {
 
 class _ReadingCard extends StatelessWidget {
   const _ReadingCard({required this.reading, required this.isOutlier});
-  final VitalReading reading;
+  final VitalMinuteDisplay reading;
   final bool isOutlier;
   @override
   Widget build(BuildContext context) {
     final metrics = <String>[];
-    if (reading.heartRate != null) {
-      metrics.add('${reading.heartRate!.round()} bpm');
+    if (reading.median(VitalMetric.heartRate) != null) {
+      metrics.add('${reading.median(VitalMetric.heartRate)!.round()} bpm');
     }
-    if (reading.spo2 != null) {
-      metrics.add('${reading.spo2!.toStringAsFixed(0)}% SpO₂');
+    if (reading.median(VitalMetric.spo2) != null) {
+      metrics.add(
+        '${reading.median(VitalMetric.spo2)!.toStringAsFixed(0)}% SpO₂',
+      );
     }
-    if (reading.temperature != null) {
-      metrics.add('${reading.temperature!.toStringAsFixed(1)} °C');
+    if (reading.median(VitalMetric.temperature) != null) {
+      metrics.add(
+        '${reading.median(VitalMetric.temperature)!.toStringAsFixed(1)} °C',
+      );
     }
     return Card(
       child: ListTile(
         leading: const CircleAvatar(child: Icon(Icons.monitor_heart_outlined)),
         title: Text(
-          metrics.isEmpty
-              ? 'Leitura sem métricas reconhecidas'
-              : metrics.join(' • '),
+          metrics.isEmpty ? 'Medição indisponível' : metrics.join(' • '),
         ),
         subtitle: Text(
-          '${DateFormat("dd/MM/yyyy 'às' HH:mm").format(reading.timestamp)}${reading.simulated ? ' • SIMULADA' : ''}${isOutlier ? ' • Variação pessoal incomum' : ''}',
+          '${DateFormat("dd/MM/yyyy 'às' HH:mm").format(reading.timestamp)}${reading.simulated ? ' • SIMULADA' : ''}${isOutlier ? ' • Alteração persistente no minuto' : ''}'
+          '${reading.readings.any((r) => r.hasQualityIssue || r.hasUnreportedQuality || r.hasUnconfirmedSignal) ? '\n${reading.readings.where((r) => r.hasQualityIssue || r.hasUnreportedQuality || r.hasUnconfirmedSignal).map((r) => r.qualityDescription).toSet().join('; ')}' : ''}',
         ),
         trailing: isOutlier
             ? const Icon(Icons.info_outline, color: Colors.orange)

@@ -68,3 +68,22 @@ venv/
 # Windows local files
 Thumbs.db
 Desktop.ini
+
+# Credenciais locais
+Config.h
+
+# Compilacoes e testes locais
+/build-*/
+/.test-build/
+*.bin
+*.elf
+*.map
+*.o
+*.obj
+*.exe
+*.pdb
+*.ilk
+
+# Experimentos locais; nao participam do firmware
+/Codigo/Esp32/tests/
+/PpgSignalQuality.h

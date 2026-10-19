@@ -1,10 +1,34 @@
 import 'dart:typed_data';
 import 'vital_baseline_algorithm.dart';
+import 'vital_reading.dart';
+import 'package:intl/intl.dart';
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 class VitalReportPdf {
+  /// Receives the same quality-filtered records used by summaries/occurrences.
+  static List<Map<String, Object?>> readingRows(
+    Iterable<VitalReading> readings,
+  ) => readings
+      .map(
+        (item) => <String, Object?>{
+          'time': DateFormat('HH:mm:ss').format(item.timestamp),
+          'source': item.simulated
+              ? 'Simulada'
+              : 'Não sinalizada como simulada',
+          'heartRate': item.heartRate == null
+              ? '-'
+              : '${item.heartRate!.round()} bpm',
+          'spo2': item.spo2 == null ? '-' : '${item.spo2!.round()}%',
+          'temperature': item.temperature == null
+              ? '-'
+              : '${item.temperature!.toStringAsFixed(1)} C',
+          'quality': item.qualityDescription,
+        },
+      )
+      .toList();
+
   static Future<Uint8List> build({
     required Map<Object?, Object?> profile,
     required DateTime date,
@@ -37,6 +61,7 @@ class VitalReportPdf {
             'Data selecionada: ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}',
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
+          pw.Text('Total de registros: ${readings.length}'),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
             headers: const [
@@ -45,6 +70,7 @@ class VitalReportPdf {
               'SpO2',
               'Temperatura',
               'Origem',
+              'Qualidade',
             ],
             data: readings
                 .map(
@@ -54,6 +80,7 @@ class VitalReportPdf {
                     reading['spo2'],
                     reading['temperature'],
                     reading['source'],
+                    reading['quality'] ?? 'Qualidade não informada',
                   ],
                 )
                 .toList(),
@@ -66,6 +93,11 @@ class VitalReportPdf {
           pw.SizedBox(height: 20),
           pw.Text(
             'Relatório descritivo, sem diagnóstico. Registros simulados são identificados na tabela. Ausência de marcador de simulação não comprova origem física.',
+          ),
+          pw.Text(
+            'Valores indisponíveis ou inconclusivos aparecem como "-". '
+            'Qualidade descreve verificações de aquisição, não validação clínica. '
+            'Valores altos ou baixos não são excluídos por sua magnitude.',
           ),
           pw.Text(
             'Versão de análise do aplicativo: ${defaultVitalAlgorithmConfig.algorithmVersion}. Este PDF não contém escores nem classificações.',
